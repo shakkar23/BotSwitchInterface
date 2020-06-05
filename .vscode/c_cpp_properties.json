@@ -1,0 +1,41 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:devkitpro/libnx/include/**",
+                "C:devkitpro/libnx/include/switch/**",
+                "C:devkitpro/portlibs/switch/include/**"
+            ],
+            "defines": [
+                "__SWITCH__",
+                "SERVER_IMP"
+            ],
+            "compilerPath": "makedevkitpro/devkitA64/bin/aarch64-none-elf-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "gcc-x64"
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}",
+                "/devkitpro/libnx/include/**",
+                "/devkitpro/libnx/include/switch/**",
+                "/devkitPro/libnx/include/switch/services/**",
+                "/devkitPro/libnx/include/switch/kernel/**",
+                "/devkitPro/devkitA64/lib/gcc/aarch64-none-elf/10.1.0/include/**"
+            ],
+            "defines": [
+                "__SWITCH__",
+                "SERVER_IMP"
+            ],
+            "compilerPath": "C:/devkitpro/devkitA64/bin/aarch64-none-elf-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
