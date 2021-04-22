@@ -20,7 +20,7 @@ extern "C"
 
 // Adjust size as needed.#
 #define INNER_HEAP_SIZE 0x90000
-#define HEAP_SIZE 0x000888000
+#define HEAP_SIZE 0x000288000
 	size_t nx_inner_heap_size = HEAP_SIZE;
 	char fake_heap[HEAP_SIZE];
 
@@ -29,11 +29,6 @@ extern "C"
 	void __appInit(void);
 	void __appExit(void);
 }
-typedef struct
-{
-	u64 size;
-	void *data;
-} USBResponse;
 
 Result rc;
 u64 mainAddr = {0};
@@ -41,6 +36,8 @@ Handle debughandle = {0};
 Handle applicationDebug = {0};
 u64 applicationProcessId = {0};
 u64 pid = {0};
+Event vsync_event;
+ViDisplay disp;
 
 // we override libnx internals to do a minimal init
 void __libnx_initheap(void)
@@ -52,35 +49,27 @@ void __libnx_initheap(void)
 	fake_heap_start = fake_heap;
 	fake_heap_end = fake_heap + HEAP_SIZE;
 }
-void sendUsbResponse(USBResponse x)
-{
-	usbCommsWrite((void *)&x.size, 4); // send size of response
-	if (x.size > 0)
-	{
-		usbCommsWrite(x.data, x.size); // send actual response
-	}
-}
 void __appInit(void)
 {
 	Result rc;
-	svcSleepThread(20000000000L);
+	svcSleepThread(10000000000); //10 seconds
 	rc = smInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x5122);
 	rc = ldrDmntInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(0x05123);
+		fatalThrow(0x5123);
 	else if (hosversionGet() == 0)
 	{
 		rc = setsysInitialize();
 		if (R_FAILED(rc))
-			fatalThrow(rc);
+			fatalThrow(0x5124);
 		else if (R_SUCCEEDED(rc))
 		{
 			SetSysFirmwareVersion fw;
 			rc = setsysGetFirmwareVersion(&fw);
 			if (R_FAILED(rc))
-				fatalThrow(rc);
+				fatalThrow(0x5125);
 			else if (R_SUCCEEDED(rc))
 				hosversionSet(MAKEHOSVERSION(fw.major, fw.minor, fw.micro));
 			setsysExit();
@@ -88,22 +77,25 @@ void __appInit(void)
 	}
 	rc = fsInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
-	rc = fsdevMountSdmc();
-	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x5126);
+	//rc = fsdevMountSdmc();
+	//if (R_FAILED(rc))
+	//	fatalThrow(rc);
 	rc = timeInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x5127);
 	rc = socketInitializeDefault();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x5128);
 	rc = pmdmntInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x5129);
 	rc = usbCommsInitialize();
 	if (R_FAILED(rc))
-		fatalThrow(rc);
+		fatalThrow(0x512a);
+	rc = viInitialize(ViServiceType_System);
+	if (R_FAILED(rc))
+		fatalThrow(0x512b);
 }
 void __appExit(void)
 {
@@ -116,6 +108,9 @@ void __appExit(void)
 	pmdmntExit();
 	ldrDmntExit();
 	usbCommsExit();
+	timeExit();
+	socketExit();
+	viExit();
 }
 u64 pidpls(u64 pid)
 {
@@ -146,85 +141,10 @@ int argmain(int argc, char **argv)
 	{
 		if (argc != 3)
 		{
-			x.size = 1;
-			x.data = (void *)1;
+			char z[31] = "bruh momentum, peek didnt work";
+			x.size = sizeof(z);
+			x.data = z;
 			sendUsbResponse(x);
-			return 0;
-		}
-		u64 pid = 0;
-		u64 pids[300];
-		s32 numProc;
-		rc = svcGetProcessList(&numProc, pids, 300);
-		if (R_FAILED(0x0BA3A1A3))
-		{
-		}
-		pid = pids[numProc - 1];
-		u64 offset = parseStringToInt(argv[1]);
-		int size = parseStringToInt(argv[2]);
-		u64 data = {1};
-		rc = svcDebugActiveProcess(&debughandle, pid);
-		if (R_FAILED(rc))
-			fatalThrow(0x42036);
-		rc = svcReadDebugProcessMemory(&data, debughandle, offset, size);
-		if (R_FAILED(rc))
-			fatalThrow(0x265);
-		rc = svcBreakDebugProcess(debughandle);
-		if (R_FAILED(rc))
-			fatalThrow(0x599);
-		x.size = size;
-		x.data = (void *)data;
-		sendUsbResponse(x);
-	}
-
-	else if (!strcmp(argv[0], "Configurable_Command"))
-	{
-		//just copy paste this to make another value looker atter command
-		if (debughandle != 0)
-			svcCloseHandle(debughandle);
-		u64 pids[300];
-		s32 numProc;
-		rc = svcGetProcessList(&numProc, pids, 300);
-		if (R_FAILED(rc))
-			fatalThrow(0x69);
-		u64 pid = pids[numProc - 1];
-		rc = svcDebugActiveProcess(&debughandle, pid);
-		if (R_FAILED(rc))
-			fatalThrow(0x01);
-		u64 offset1 = parseStringToInt(argv[1]);
-		u64 size = parseStringToInt(argv[2]);
-		//probably make variable here
-		rc = svcBreakDebugProcess(debughandle);
-		if (R_FAILED(rc))
-			fatalThrow(0x02);
-
-		//svcReadDebugProcessMemory(&data, debughandle, offset1, size);
-		//data is a variable you have to make to store whatever you are looking at
-		//debughandle is something that you dont change
-		//offset is the address you want to look at
-		//size is the size of the data you want to look at
-		//x.size = size;
-		//x.data = (void *)data;
-		//sendUsbResponse(x);
-		//rc = svcCloseHandle(debughandle);
-		//uncomment this code here^^
-
-		//pointers are easy to look at, just use this
-		//u64 offset2 = your second offset
-		//u64 offset3 = your third offset
-		//svcReadDebugProcessMemory(&offset2, debughandle, mainAddr + offset, size);
-		//svcReadDebugProcessMemory(&offset3, debughandle, offset2 + offset2, size);
-		// keep doing this and it should just work, add more u64's of offsets and set them to whatever your offsets are
-	}
-
-	else if (!strcmp(argv[0], "PeekAbsolute"))
-	{
-		if (argc != 3)
-		{ // if you get 3 as a response, either it worked and you got the value 3, or this if statement was triggered
-			//or this if statement is telling you that it doesnt work
-			x.size = sizeof(int);
-			x.data = (void *)3;
-			sendUsbResponse(x);
-			return 0;
 		}
 		if (debughandle != 0)
 			svcCloseHandle(debughandle);
@@ -234,25 +154,121 @@ int argmain(int argc, char **argv)
 		if (R_FAILED(rc))
 			fatalThrow(0x69);
 		u64 pid = pids[numProc - 1];
+
+		pmdmntGetApplicationProcessId(&pid);
 		rc = svcDebugActiveProcess(&debughandle, pid);
 		if (R_FAILED(rc))
-			fatalThrow(0x01);
-		u64 offset = parseStringToInt(argv[1]);
+			fatalThrow(0x1);
+		u64 offset = parseStringToInt(argv[1]) + mainAddr;
 		u64 size = parseStringToInt(argv[2]);
 		u8 *data = new u8[size];
 		rc = svcBreakDebugProcess(debughandle);
 		if (R_FAILED(rc))
-			fatalThrow(0x02);
+			fatalThrow(0x2);
 		rc = svcReadDebugProcessMemory(data, debughandle, offset, size);
 		if (R_FAILED(rc))
-			fatalThrow(rc);
+		{
+			char z[26] = "Invalid offsetted address";
+			x.size = sizeof(z);
+			x.data = z;
+			sendUsbResponse(x);
+			return 0;
+		}
 		x.size = size;
 		x.data = (void *)data;
 		sendUsbResponse(x);
 		delete[] data;
 		rc = svcCloseHandle(debughandle);
 		if (R_FAILED(rc))
-			fatalThrow(0x0798);
+			fatalThrow(0x798);
+	}
+
+	// else if (!strcmp(argv[0], "Configurable_Command"))
+	// {
+	// 	//just copy paste this to make another value looker atter command
+	// 	if (debughandle != 0)
+	// 		svcCloseHandle(debughandle);
+	// 	u64 pids[300];
+	// 	s32 numProc;
+	// 	rc = svcGetProcessList(&numProc, pids, 300);
+	// 	if (R_FAILED(rc))
+	// 		fatalThrow(0x69);
+	// 	u64 pid = pids[numProc - 1];
+	// 	rc = svcDebugActiveProcess(&debughandle, pid);
+	// 	if (R_FAILED(rc))
+	// 		fatalThrow(0x1);
+	// 	u64 offset1 = parseStringToInt(argv[1]);
+	// 	u64 size = parseStringToInt(argv[2]);
+	// 	//probably make variable here
+	// 	rc = svcBreakDebugProcess(debughandle);
+	// 	if (R_FAILED(rc))
+	// 		fatalThrow(0x2);
+	// 	//svcReadDebugProcessMemory(&data, debughandle, offset1, size);
+	// 	//data is a variable you have to make to store whatever you are looking at
+	// 	//debughandle is something that you dont change
+	// 	//offset is the address you want to look at
+	// 	//size is the size of the data you want to look at
+	// 	//x.size = size;
+	// 	//x.data = (void *)data;
+	// 	//sendUsbResponse(x);
+	// 	//rc = svcCloseHandle(debughandle);
+	// 	//uncomment this code here^^
+	// 	//pointers are easy to look at, just use this
+	// 	//u64 offset2 = your second offset
+	// 	//u64 offset3 = your third offset
+	// 	//svcReadDebugProcessMemory(&offset2, debughandle, mainAddr + offset, size);
+	// 	//svcReadDebugProcessMemory(&offset3, debughandle, offset2 + offset2, size);
+	// 	// keep doing this and it should just work, add more u64's of offsets and set them to whatever your offsets are
+	// }
+
+	else if (!strcmp(argv[0], "PeekAbsolute"))
+	{
+		if (argc != 3)
+		{ // if you get 3 as a response, either it worked and you got the value 3, or this if statement was triggered
+			//or this if statement is telling you that it doesnt work
+			char z[18] = "not enough args";
+			x.size = sizeof(z);
+			x.data = z;
+			sendUsbResponse(x);
+		}
+		if (debughandle != 0)
+			svcCloseHandle(debughandle);
+		u64 pids[300];
+		s32 numProc;
+		rc = svcGetProcessList(&numProc, pids, 300);
+		if (R_FAILED(rc))
+			fatalThrow(0x69);
+		u64 pid = pids[numProc - 1];
+
+		pmdmntGetApplicationProcessId(&pid);
+		rc = svcDebugActiveProcess(&debughandle, pid);
+		if (R_FAILED(rc))
+			fatalThrow(0x1);
+		u64 offset = parseStringToInt(argv[1]);
+		u64 size = parseStringToInt(argv[2]);
+		u8 *data = new u8[size];
+		rc = svcBreakDebugProcess(debughandle);
+		if (R_FAILED(rc))
+			fatalThrow(0x2);
+		rc = svcReadDebugProcessMemory(data, debughandle, offset, size);
+		if (R_FAILED(rc))
+		{
+			char z[25] = "Invalid Absolute address";
+			x.size = sizeof(z);
+			x.data = z;
+			sendUsbResponse(x);
+			rc = svcCloseHandle(debughandle);
+			if (R_FAILED(rc))
+				fatalThrow(0x795);
+			return 0;
+		}
+		x.size = size;
+		x.data = (void *)data;
+		sendUsbResponse(x);
+		delete[] data;
+		rc = svcCloseHandle(debughandle);
+		if (R_FAILED(rc))
+			fatalThrow(0x798);
 	}
 
 	// click <buttontype>
@@ -265,7 +281,7 @@ int argmain(int argc, char **argv)
 			sendUsbResponse(x);
 			return 0;
 		}
-		HidControllerKeys key = parseStringToButton(argv[1]);
+		HidNpadButton key = parseStringToButton(argv[1]);
 		click(key);
 	}
 
@@ -279,8 +295,45 @@ int argmain(int argc, char **argv)
 			sendUsbResponse(x);
 			return 0;
 		}
-		HidControllerKeys key = parseStringToButton(argv[1]);
+		HidNpadButton key = parseStringToButton(argv[1]);
 		press(key);
+	}
+
+	else if (!strcmp(argv[0], "poke"))
+	{
+		if (argc != 4)
+		{ // if you get 3 as a response, either it worked and you got the value 3, or this if statement was triggered
+			//or this if statement is telling you that it doesnt work
+			char z[18] = "not enough args";
+			x.size = sizeof(z);
+			x.data = z;
+			sendUsbResponse(x);
+		}
+		if (debughandle != 0)
+			svcCloseHandle(debughandle);
+		u64 pids[300];
+		s32 numProc;
+		rc = svcGetProcessList(&numProc, pids, 300);
+		if (R_FAILED(rc))
+			fatalThrow(0x69);
+		u64 pid = pids[numProc - 1];
+
+		pmdmntGetApplicationProcessId(&pid);
+		rc = svcDebugActiveProcess(&debughandle, pid);
+		if (R_FAILED(rc))
+			fatalThrow(0x67818);
+		u64 offset = parseStringToInt(argv[1]);
+		u64 size = parseStringToInt(argv[2]);
+		u64 data = parseStringToInt(argv[3]);
+
+		rc = svcBreakDebugProcess(debughandle);
+		if (R_FAILED(rc))
+			fatalThrow(0x2182);
+		rc = svcWriteDebugProcessMemory(debughandle, &data, offset, size);
+
+		rc = svcCloseHandle(debughandle);
+		if (R_FAILED(rc))
+			fatalThrow(0x794);
 	}
 
 	// release <buttontype>
@@ -291,7 +344,7 @@ int argmain(int argc, char **argv)
 		x.data = (void *)6;
 		sendUsbResponse(x);
 		return 0;
-		HidControllerKeys key = parseStringToButton(argv[1]);
+		HidNpadButton key = parseStringToButton(argv[1]);
 		release(key);
 	}
 
@@ -309,11 +362,11 @@ int argmain(int argc, char **argv)
 		int side = 0;
 		if (!strcmp(argv[1], "LEFT"))
 		{
-			side = JOYSTICK_LEFT;
+			side = JOYSTICK_MIN;
 		}
 		else if (!strcmp(argv[1], "RIGHT"))
 		{
-			side = JOYSTICK_RIGHT;
+			side = JOYSTICK_MAX;
 		}
 		else
 		{
@@ -398,9 +451,25 @@ int argmain(int argc, char **argv)
 	{
 		// u64 mainAddr = getMainNsoBase();
 		x.size = sizeof(mainAddr);
-		x.data = &mainAddr;
+		x.data = (void *)&mainAddr;
 		sendUsbResponse(x);
 		//havent tested this but im pretty sure it works
+	}
+
+	else if (!strcmp(argv[0], "TitleID"))
+	{
+		u8 joe[0x20] = {0};
+		BuildID(joe);
+		//u8 mama[0x20] = {0x9D, 0x42, 0x5D, 0xBF, 0x1D, 0x9C, 0x54, 0x88, 0x53, 0xAE, 0xCB, 0xB1, 0xD4, 0xF2, 0x6C, 0xAB, 0x51, 0x35, 0x5C, 0xCC};
+
+		x.size = sizeof(joe);
+		x.data = joe;
+		sendUsbResponse(x);
+	}
+
+	else if (!strcmp(argv[0], "enablePointerMode"))
+	{
+		pointerMode();
 	}
 
 	return 0;
@@ -408,15 +477,19 @@ int argmain(int argc, char **argv)
 
 int main()
 {
+	
 	// Result rc;
 	USBResponse x;
 	mainAddr = getMainNsoBase();
+	viOpenDefaultDisplay(&disp);
+	viGetDisplayVsyncEvent(&disp, &vsync_event);
 
-	while (appletMainLoop()) // it loops in here forever until you turn off the sysmod
+	while (appletMainLoop()) // it loops in here forever until you turn off the sysmod, when that happens it aborts on the instruction its on without calling destructors
 	{
 		int len;
 		usbCommsRead(&len, sizeof(len));
-
+		if (len == UINT32_MAX)
+			continue;
 		char linebuf[len + 1];
 
 		for (int i = 0; i < len + 1; i++)
@@ -441,7 +514,7 @@ int main()
 			sendUsbResponse(x);
 		}
 		// if you are getting preformance issues lower this, although for my purposes i dont need to
-		svcSleepThread(mainLoopSleepTime * 1e+6L);
+		svcSleepThread(mainLoopSleepTime * 100000000);
 	}
 	return 0;
 }

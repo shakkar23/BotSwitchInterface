@@ -6,5 +6,5 @@ extern bool debugResultCodes;
 
 // int setupServerSocket();
 u64 parseStringToInt(char* arg);
-u8* parseStringToByteBuffer(char* arg, u64* size);
-HidControllerKeys parseStringToButton(char* arg);
+u8 *parseStringToByteBuffer(char *arg, u64 *size);
+HidNpadButton parseStringToButton(char *arg);

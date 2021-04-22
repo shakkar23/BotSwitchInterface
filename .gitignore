@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+*.nsp
+*.npdm
+*.elf
+BotSwitchInterface.rar
+*.py
+*.py
+*.py
+*.map

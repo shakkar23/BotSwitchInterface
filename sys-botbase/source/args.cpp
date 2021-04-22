@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <switch.h>
 
 int parseArgs(char* origargstr, int (*callback)(int, char**)) {
 	char* argstr = (char*)malloc(strlen(origargstr) + 1);
