@@ -19,6 +19,7 @@ extern HiddbgHdlsHandle controllerHandle;
 extern u64 pid;
 extern u64 mainAddr;
 extern Event vsync_event;
+extern HiddbgHdlsSessionId SessionId;
 typedef struct
 {
     u64 size;

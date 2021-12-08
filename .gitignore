@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.nso
 
 # Precompiled Headers
 *.gch
@@ -38,3 +39,4 @@ BotSwitchInterface.rar
 *.py
 *.py
 *.map
+sys-botbase/build

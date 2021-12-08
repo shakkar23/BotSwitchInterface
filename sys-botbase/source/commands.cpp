@@ -8,6 +8,7 @@
 #include <switch.h>
 // Result rc;
 
+HiddbgHdlsSessionId SessionId = { 0 };
 Mutex actionLock;
 
 // Controller:
@@ -53,7 +54,7 @@ void initController()
 	// controllerState.joysticks[JOYSTICK_LEFT].dy = -0x0;
 	controllerState.analog_stick_r = {0x0, 0x0};
 	//controllerState.joysticks[JOYSTICK_RIGHT].dy = -0x0;
-	rc = hiddbgAttachHdlsWorkBuffer();
+	rc = hiddbgAttachHdlsWorkBuffer(&SessionId);
 	if (R_FAILED(rc) && debugResultCodes)
 		fatalThrow(rc);
 	;

@@ -394,7 +394,7 @@ int argmain(int argc, char **argv)
 		Result rc = hiddbgDetachHdlsVirtualDevice(controllerHandle);
 		if (R_FAILED(rc) && debugResultCodes)
 			fatalThrow(rc);
-		rc = hiddbgReleaseHdlsWorkBuffer();
+		rc = hiddbgReleaseHdlsWorkBuffer(SessionId);
 		if (R_FAILED(rc) && debugResultCodes)
 			fatalThrow(rc);
 		hiddbgExit();

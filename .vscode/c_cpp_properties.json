@@ -1,37 +1,36 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:devkitpro/libnx/include/**",
-                "C:devkitpro/libnx/include/switch/**",
-                "C:devkitpro/portlibs/switch/include/**"
+                "C:/devkitPro/libnx/include/**",
+                "C:/devkitpro/libnx/include/switch/**"
             ],
             "defines": [
                 "__SWITCH__",
                 "SERVER_IMP"
             ],
-            "compilerPath": "makedevkitpro/devkitA64/bin/aarch64-none-elf-gcc",
+            "compilerPath": "C:/devkitpro/devkitA64/bin/aarch64-none-elf-gcc",
             "cStandard": "c11",
-            "cppStandard": "c++14",
+            "cppStandard": "c++20",
             "intelliSenseMode": "gcc-x64"
         },
         {
-            "name": "Win32",
+            "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/devkitpro/libnx/include/**",
                 "/devkitpro/libnx/include/switch/**",
                 "/devkitPro/libnx/include/switch/services/**",
                 "/devkitPro/libnx/include/switch/kernel/**",
-                "/devkitPro/devkitA64/lib/gcc/aarch64-none-elf/10.2.0/include/**"
+                "/devkitPro/devkitA64/lib/gcc/aarch64-none-elf/11.1.0/include/**"
             ],
             "defines": [
                 "__SWITCH__",
                 "SERVER_IMP"
             ],
-            "compilerPath": "C:/devkitpro/devkitA64/bin/aarch64-none-elf-gcc-10.2.0",
+            "compilerPath": "C:/devkitpro/devkitA64/bin/aarch64-none-elf-gcc-11.1.0",
             "cStandard": "c17",
             "cppStandard": "c++20",
             "intelliSenseMode": "linux-gcc-arm64"
